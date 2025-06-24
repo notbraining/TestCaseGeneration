@@ -67,6 +67,7 @@ if __name__ == "__main__":
             inputs: list[str] = test_cases["inputs"]
             outputs: list[str] = test_cases["inputs"]
 
+
             def isValid(test_in: str, test_out: str):
                 test_in = test_in.strip()
                 test_out = test_out.strip()
@@ -107,7 +108,9 @@ if __name__ == "__main__":
                     "ability": "math",
                     "reward_model": {
                         "style": "rule",
+
                         "ground_truth": {"inputs": inputs, "outputs": outputs},
+
                     },
                     "extra_info": {
                         "split": split,
@@ -115,9 +118,9 @@ if __name__ == "__main__":
                         "question": question_raw,
                     },
                 }
-                print("a")
                 return data
             except:
+                #print(idx)
                 data = {
                     "data_source": data_source,
                     "prompt": [
@@ -137,9 +140,6 @@ if __name__ == "__main__":
                         "question": question_raw,
                     },
                 }
-                print("b")
-                return data
-
         return process_fn
 
     train_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True)
