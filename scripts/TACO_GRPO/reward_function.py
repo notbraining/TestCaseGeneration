@@ -8,6 +8,7 @@ import json
 import numpy as np
 
 
+
 def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     loaded_ground = json.loads(ground_truth)
     case_input = loaded_ground["inputs"]

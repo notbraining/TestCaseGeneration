@@ -6,6 +6,7 @@ from typing import cast
 import json
 import datasets
 
+from datasets.load import Dataset, DatasetDict
 from verl.utils.hdfs_io import copy, makedirs
 # added this header
 
@@ -38,9 +39,34 @@ if __name__ == "__main__":
 
             question = question_raw
 
-            test_cases: dict = json.loads(example.pop("input_output"))
-            inputs: list[string] = test_cases["inputs"]
-            outputs: list[string] = test_cases["inputs"]
+            test_cases = example.pop("input_output")
+            try:
+                test_cases = json.loads(test_cases)
+            except:
+                data = {
+                    "data_source": data_source,
+                    "prompt": [
+                        {
+                            "role": "user",
+                            "content": question,
+                        }
+                    ],
+                    "ability": "math",
+                    "reward_model": {
+                        "style": "rule",
+                        "ground_truth": {"inputs": [], "outputs": []},
+                    },
+                    "extra_info": {
+                        "split": split,
+                        "index": idx,
+                        "question": question_raw,
+                    },
+                }
+                return data
+
+            inputs: list[str] = test_cases["inputs"]
+            outputs: list[str] = test_cases["inputs"]
+
 
             def isValid(test_in: str, test_out: str):
                 test_in = test_in.strip()
@@ -82,7 +108,9 @@ if __name__ == "__main__":
                     "ability": "math",
                     "reward_model": {
                         "style": "rule",
-                        "ground_truth": {"inputs": [], "outputs": ["asdf"]},
+
+                        "ground_truth": {"inputs": inputs, "outputs": outputs},
+
                     },
                     "extra_info": {
                         "split": split,
@@ -92,7 +120,7 @@ if __name__ == "__main__":
                 }
                 return data
             except:
-                print(idx)
+                #print(idx)
                 data = {
                     "data_source": data_source,
                     "prompt": [
@@ -112,7 +140,6 @@ if __name__ == "__main__":
                         "question": question_raw,
                     },
                 }
-
         return process_fn
 
     train_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True)
