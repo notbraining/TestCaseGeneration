@@ -13,11 +13,14 @@ import faulthandler
 import resource
 import builtins
 import json
+import numpy as np
 
 def compute_score(data_source, solution_str, ground_truth, extra_info=None):
-  print("data_source: ", data_source)
-  print("solution_str: ", solution_str)
-  print("ground_truth: ", ground_truth)
+ # print("data_source: ", data_source)
+  #print("solution_str: ", solution_str)
+  #print("ground_truth: ", ground_truth)
+  print(solution_str)
+
   loaded_ground = json.loads(ground_truth)
   case_input = loaded_ground["inputs"]
   case_output = loaded_ground["outputs"]
@@ -26,8 +29,11 @@ def compute_score(data_source, solution_str, ground_truth, extra_info=None):
 
 def run_code(code, case_input, output_queue, memory_limit=256):
     start = time.time()
-    code = code.replace("python", "")
-    code = code.replace("```", "")
+    compiled = re.findall("```python\n(.*?)\n```", code, re.DOTALL)
+    if(len(compiled) > 0):
+        code = compiled[-1]
+    else:
+        return "CODE NOT FOUND"
     if isinstance(case_input, list):
         case_input = ' '.join(str(s) for s in case_input)
 
@@ -73,7 +79,7 @@ def test_code(code, cases, ex_out, time_limit):
 
             if (out == "ERROR\n" or out == "RUNTIME ERROR\n"):
                 score -= 1 / len(cases) * 50
-
+        print("out output, ex_out:")
         if isinstance(out, dict) and out['output'].rstrip() == ex_out[i].rstrip():
             correct_cases += 1
         else:
