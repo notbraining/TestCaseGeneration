@@ -1,11 +1,15 @@
 import argparse
-import os
 import re
+import os
+from typing import cast
 
+import json
 import datasets
 
+from datasets.load import Dataset, DatasetDict
 from verl.utils.hdfs_io import copy, makedirs
-#added this header
+# added this header
+
 
 def extract_solution(solution_str):
     solution = re.search("#### (\\-?[0-9\\.\\,]+)", solution_str)
@@ -24,37 +28,117 @@ if __name__ == "__main__":
 
     data_source = "BAAI/TACO"
 
-    dataset = datasets.load_dataset(data_source, "ALL")
+    dataset: DatasetDict = cast(DatasetDict, datasets.load_dataset(data_source, "ALL"))
 
-    train_dataset = dataset["train"]
-    test_dataset = dataset["test"]
+    train_dataset: Dataset = dataset["train"]
+    test_dataset: Dataset = dataset["test"]
 
-    # add a row to each data item that represents a unique id
     def make_map_fn(split):
         def process_fn(example, idx):
             question_raw = example.pop("question")
 
             question = question_raw
 
-            answer_raw = example.pop("input_output")
-            data = {
-                "data_source": data_source,
-                "prompt": [
-                    {
-                        "role": "user",
-                        "content": question,
-                    }
-                ],
-                "ability": "math",
-                "reward_model": {"style": "rule", "ground_truth": answer_raw},
-                "extra_info": {
-                    "split": split,
-                    "index": idx,
-                    "answer": answer_raw,
-                    "question": question_raw,
-                },
-            }
-            return data
+            test_cases = example.pop("input_output")
+            try:
+                test_cases = json.loads(test_cases)
+            except:
+                data = {
+                    "data_source": data_source,
+                    "prompt": [
+                        {
+                            "role": "user",
+                            "content": question,
+                        }
+                    ],
+                    "ability": "math",
+                    "reward_model": {
+                        "style": "rule",
+                        "ground_truth": {"inputs": [], "outputs": []},
+                    },
+                    "extra_info": {
+                        "split": split,
+                        "index": idx,
+                        "question": question_raw,
+                    },
+                }
+                return data
+
+            inputs: list[str] = test_cases["inputs"]
+            outputs: list[str] = test_cases["inputs"]
+
+            def isValid(test_in: str, test_out: str):
+                test_in = test_in.strip()
+                test_out = test_out.strip()
+
+                if len(test_in) > 20 or len(test_out) > 10:
+                    return False
+
+                for num in test_in.split():
+                    if not num.isdigit():
+                        continue
+                    if int(num) > 25:
+                        return False
+
+                for num in test_out.split():
+                    if not num.isdigit():
+                        continue
+                    if int(num) > 25:
+                        return False
+                return True
+
+            def remove_long(data) -> bool:
+                if isinstance(data[0], str) and isinstance(data[1], str):
+                    return isValid(data[0], data[1])
+                return False
+
+            try:
+                inputs, outputs = map(
+                    list, zip(*list(filter(remove_long, zip(inputs, outputs))))
+                )
+                data = {
+                    "data_source": data_source,
+                    "prompt": [
+                        {
+                            "role": "user",
+                            "content": question,
+                        }
+                    ],
+                    "ability": "math",
+                    "reward_model": {
+                        "style": "rule",
+                        "ground_truth": {"inputs": inputs, "outputs": outputs},
+                    },
+                    "extra_info": {
+                        "split": split,
+                        "index": idx,
+                        "question": question_raw,
+                    },
+                }
+                print("a")
+                return data
+            except:
+                data = {
+                    "data_source": data_source,
+                    "prompt": [
+                        {
+                            "role": "user",
+                            "content": question,
+                        }
+                    ],
+                    "ability": "math",
+                    "reward_model": {
+                        "style": "rule",
+                        "ground_truth": {"inputs": [], "outputs": []},
+                    },
+                    "extra_info": {
+                        "split": split,
+                        "index": idx,
+                        "question": question_raw,
+                    },
+                }
+                print("b")
+                return data
 
         return process_fn
 
