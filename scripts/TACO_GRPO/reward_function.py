@@ -5,6 +5,7 @@ import builtins
 import sys
 import resource
 import json
+import numpy as np
 
 
 def compute_score(data_source, solution_str, ground_truth, extra_info=None):
@@ -13,11 +14,13 @@ def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     case_output = loaded_ground["outputs"]
     return test_code(solution_str, case_input, case_output, 100)
 
-
 def run_code(code, case_input, output_queue, memory_limit=256):
     start = time.time()
-    code = code.replace("python", "")
-    code = code.replace("```", "")
+    compiled = re.findall("```python\n(.*?)\n```", code, re.DOTALL)
+    if(len(compiled) > 0):
+        code = compiled[-1]
+    else:
+        return "CODE NOT FOUND"
     if isinstance(case_input, list):
         case_input = " ".join(str(s) for s in case_input)
 
