@@ -21,7 +21,7 @@ def extract_solution(solution_str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="~/data/gsm8k")
+    parser.add_argument("--local_dir", default="~/data/TACO")
     parser.add_argument("--hdfs_dir", default=None)
 
     args = parser.parse_args()
@@ -51,7 +51,7 @@ if __name__ == "__main__":
                             "content": question,
                         }
                     ],
-                    "ability": "math",
+                    "ability": "code",
                     "reward_model": {
                         "style": "rule",
                         "ground_truth": {"inputs": [], "outputs": []},
@@ -65,7 +65,7 @@ if __name__ == "__main__":
                 return data
 
             inputs: list[str] = test_cases["inputs"]
-            outputs: list[str] = test_cases["inputs"]
+            outputs: list[str] = test_cases["outputs"]
 
 
             def isValid(test_in: str, test_out: str):
@@ -105,7 +105,7 @@ if __name__ == "__main__":
                             "content": question,
                         }
                     ],
-                    "ability": "math",
+                    "ability": "code",
                     "reward_model": {
                         "style": "rule",
 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
                             "content": question,
                         }
                     ],
-                    "ability": "math",
+                    "ability": "code",
                     "reward_model": {
                         "style": "rule",
                         "ground_truth": {"inputs": [], "outputs": []},
