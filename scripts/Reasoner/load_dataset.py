@@ -46,14 +46,6 @@ if __name__ == "__main__":
 
         def format_prompt(prompt: str) -> list[dict]:
             return [
-                {
-                    "role": "system",
-                    "content": """
-    /think
-    You will be given a competitive programming problem with small input test cases. 
-    You need to find the correct output for the given input by reasoning step by step through the test cases without writing any code.
-    """,
-                },
                 {"role": "user", "content": prompt},
             ]
 
