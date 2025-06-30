@@ -1,6 +1,6 @@
 import pandas as pd
 
-LENGTH = 4096 * 2
+LENGTH = 128
 
 
 def main():

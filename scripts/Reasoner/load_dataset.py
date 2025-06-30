@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
         def format_prompt(prompt: str) -> list[dict]:
             return [
-                {"role": "user", "content": prompt},
+                {"role": "user", "content": "x"},
             ]
 
         print("formatting...")
@@ -58,13 +58,7 @@ if __name__ == "__main__":
             assert isinstance(input_output_pair[0], str)
             assert isinstance(input_output_pair[1], str)
 
-            return {
-                "style": "rule",
-                "ground_truth": {
-                    "inputs": input_output_pair[0],
-                    "outputs": input_output_pair[1],
-                },
-            }
+            return {"style": "rule", "ground_truth": "80"}
 
         reward_model = list(map(format_reward_model, zip(prompts, ground_truth)))
         df = pd.DataFrame(
@@ -76,6 +70,7 @@ if __name__ == "__main__":
             }
         )
         print("Writing to parquet...")
+        df = df.head(128)
         df.to_parquet(f"TACO_{split}_processed.parquet")
         print("done")
         print(df.head())
