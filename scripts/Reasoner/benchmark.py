@@ -19,8 +19,8 @@ def main (split: str, max_length: int):
     tot = len(correct_data)
     tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1", trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained("deepseek-ai/DeepSeek-R1", trust_remote_code=True)
-    idx = 0
-    for data in correct_data:
+
+    for idx, data in enumerate(correct_data, start = 0):
         inputs = tokenizer(correct_data['prompt'], return_tensors="pt")
         generate_ids = model.generate(inputs.input_ids, max_length=30)
         generated = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
@@ -29,7 +29,6 @@ def main (split: str, max_length: int):
         )
         if len(solution_str)>0 and solution_str[-1] == correct_data['completions']:
             correct+=1
-        idx+=1
         if idx>=max_length:
             break
     print(f"Eval: {correct}/{tot}, Accuracy: {correct/tot}")
