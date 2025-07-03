@@ -1,3 +1,4 @@
+from statistics import mode
 import threading
 from tqdm import tqdm
 from datasets import load_dataset
@@ -9,7 +10,12 @@ import asyncio
 import random
 import aiohttp
 import asyncio
+import os
+from dotenv import load_dotenv
+import logging
 
+logger = logging.getLogger(__name__)
+load_dotenv()
 # returns simple test cases for a problem
 def filter_data(data: dict) -> tuple[list[str], list[str]]:
     input_output = json.loads(data["input_output"])
@@ -57,7 +63,7 @@ async def get_completion(prompt: str, idx: int) -> str:
     print(f"Making request with index: {idx}")
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
-        "Authorization": "Bearer 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",
+        "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
         "Content-Type": "application/json",
     }
     payload = {
@@ -123,19 +129,20 @@ async def main(split: str, max_length: int):
         prompts.extend(prompt)
         completions.extend(completion)
     prompts = prompts[:max_length]
-    completions = prompts[:max_length]
+    completions = completions[:max_length]
 
-    print(f"Length of dataset to be given to openrouter: {len(prompts)}")
+    #print(f"Length of dataset to be given to openrouter: {len(prompts)}")
 
-    tasks = [get_completion(prompts[i], i) for i in range(len(prompts))]
+    tasks = [get_completion(prompts[i], i) for i in range(0,len(prompts))]
     model_completions = await asyncio.gather(*tasks)
-    print("Results:", model_completions)
-
+    #print("Results:", model_completions)
+    print("length of model_completions:",len(model_completions))
+    print("length of completions: ", len(completions))
     for i in range (len(prompts)):
         solution_str = re.findall(
                 r"<answer>(.*)</answer>", model_completions[i], re.DOTALL
             )
-        
+        print(f"solution str and completions: {solution_str}, {completions[i].strip()}")
         if len(solution_str) > 0:
             if solution_str[-1].strip() == completions[i].strip():
                 prompts_final.append(prompts[i])
@@ -149,7 +156,9 @@ async def main(split: str, max_length: int):
     
     # print(completions)
     # shuffles dataset to split up test cases of the same problem
+    print("checks:",len(prompts_final), len(completions_final))
     shuffled_list = list(zip(prompts_final, completions_final))
+    print("shuffled_list sus: ",len(shuffled_list))
     random.shuffle(shuffled_list)
     prompts_final, completions_final = zip(*shuffled_list)
     save_dataset(prompts_final, completions_final, split,  f"{split}.hf")
