@@ -1,21 +1,26 @@
-import threading
-from tqdm import tqdm
 from datasets import load_dataset
-import re
 import requests
 from datasets import Dataset
 import json
+import threading
 import asyncio
-import random
 import aiohttp
 import asyncio
+import multiprocessing
+import time
+import io
+import sys
+import builtins
+import re
+import random
+from tqdm import tqdm
 
 # returns simple test cases for a problem
 def filter_data(data: dict, difficulties: list[str]) -> tuple[list[str], list[str]]:
     difficulty_match = False
 
     for rating in difficulties:
-	if data["difficulty"] == difficulties:
+	if data["difficulty"] == rating:
 	    difficulty_match = True
 	    break
 
@@ -110,6 +115,61 @@ def save_dataset(prompts: list[str], completions: list[str], inputs: list[list[s
     ds = Dataset.from_dict({"prompt": prompts, "completion": completions, "inputs": inputs, "output": outputs})
     print(f"{split} saved to {ds.save_to_disk(f'{split}.hf')}")
 
+def run_code(code: str, test_in: str, output_queue):
+    start = time.time()
+    compiled = re.findall("```python\n(.*?)\n```", code, re.DOTALL)
+    if(len(compiled) > 0):
+        code = compiled[-1]
+    else:
+        return "CODE NOT FOUND"
+    if isinstance(test_in, list):
+        test_in = " ".join(str(s) for s in test_in)
+
+    # Mock input
+    input_lines = iter(test_in.splitlines())
+    builtins.input = lambda: next(input_lines)
+
+    # Capture output
+    buf = io.StringIO()
+    sys.stdout = buf
+    try:
+        exec(code)
+    except Exception as _:
+        output_queue.put(("RUNTIME ERROR\n", 0))
+        return
+    finally:
+        sys.stdout = sys.__stdout__
+
+    output_queue.put(
+        (
+            {
+                "output": buf.getvalue(),
+                "time": time.time() - start,
+            },
+            0,
+        )
+    )
+
+def test_code(code: str, inputs: list[str], outputs: list[str], time_limit=5000: int) -> bool:
+    for i in range(len(inputs)):
+	output_queue = multiprocessing.Queue()
+	p = multiprocessing.Process(target=run_code, args=(code, inputs, output_queue))
+    	p.start()
+	p.join(timeout=time_limit)
+	
+	if p.is_alive():
+	    p.terminate()
+	    return False
+	else:
+	    try:
+		out, _ = output_queue.get(timeout=1)
+	    except:
+		return False
+	
+	if not (isinstance(out, dict) or out["output"].rstrip() == outputs[i].rstrip()):
+	    return False
+	
+    return True
 
 async def main(split: str, difficulties: list[str], max_length: int):
     dataset = load_dataset("BAAI/TACO", split=split)
@@ -118,40 +178,44 @@ async def main(split: str, difficulties: list[str], max_length: int):
     inputs_final = []
     outputs_final = []    
 
-
     # creates list of prompts (problem statement + input) and desired completions
     prompts = []
     completions = []
+    inputs = []
+    outputs = []
 
     for data in tqdm(dataset):
         question = data["question"]
-        inputs, outputs = filter_data(data, difficulties)
+        test_ins, test_outs = filter_data(data, difficulties)
         prompt = format_prompt(question)
-        completions.extend(completion)
+	
+        prompts.extend(prompt)
+	inputs.append(test_ins)
+	outputs.append(test_outs)
+    
     prompts = prompts[:max_length]
-    completions = completions[:max_length]
+    inputs = inputs[:max_length]
+    outputs = outputs[:max_length]
 
     print(f"Length of dataset to be given to openrouter: {len(prompts)}")
 
     tasks = [get_completion(prompts[i], i) for i in range(len(prompts))]
-    model_completions = await asyncio.gather(*tasks)
-    print("Results:", model_completions)
+    completions = await asyncio.gather(*tasks)
+    print("Results:", completions)
 
     for i in range (len(prompts)):
-	code_str = re.findall(
-                r"<code>(.*)</code>", model_completions[i], re.DOTALL
-            )
+	code_str = re.findall(r"<code>(.*)</code>", completions[i], re.DOTALL)
         
-        # if len(code_str) > 0:
-            # if code_str[-1].strip() passes on all test cases:
-                # prompts_final.append(prompts[i])
-                # completions_final.append(model_completions[i].strip())
-                # if len(prompts_final) >= max_length:
-                    # save_dataset(
-                        # prompts_final, completions_final, inputs_final, outputs_final, split, f"{split}.hf"
-                    # )
-                    # break
-
+        if len(code_str) > 0:
+            if test_code(code_str[-1].strip(), inputs[i], outputs[i]):
+                prompts_final.append(prompts[i])
+                completions_final.append(completions[i].strip())
+                inputs_final.append(inputs[i])
+		outputs_final.append(outputs[i])
+		
+		if len(prompts_final) >= max_length:
+                    save_dataset(prompts_final, completions_final, inputs_final, outputs_final, split, f"{split}.hf")
+                    break
     
     # print(completions)
     save_dataset(prompts_final, completions_final, inputs_final, outputs_final, split,  f"{split}.hf")
