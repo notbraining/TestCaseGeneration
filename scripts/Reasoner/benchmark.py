@@ -13,14 +13,13 @@ from datasets import load_from_disk
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers import AutoTokenizer, DeepseekV3ForCausalLM
 
-def main (split: str):
-    tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1", trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained("deepseek-ai/DeepSeek-R1", trust_remote_code=True)
+def main (split: str, max_length: int):
     correct_data = load_from_disk(f"{split}.hf")
     correct = 0
-    print(type(correct_data))
-    print(correct_data)
     tot = len(correct_data)
+    tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1", trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained("deepseek-ai/DeepSeek-R1", trust_remote_code=True)
+    idx = 0
     for data in correct_data:
         inputs = tokenizer(correct_data['prompt'], return_tensors="pt")
         generate_ids = model.generate(inputs.input_ids, max_length=30)
@@ -28,10 +27,12 @@ def main (split: str):
         solution_str = re.findall(
                 r"<answer>(.*)</answer>", generated, re.DOTALL
         )
-        
         if len(solution_str)>0 and solution_str[-1] == correct_data['completions']:
             correct+=1
+        idx+=1
+        if idx>=max_length:
+            break
     print(f"Eval: {correct}/{tot}, Accuracy: {correct/tot}")
     
 if __name__ == "__main__":
-     main("test")
+     main("test",3)
