@@ -10,7 +10,12 @@ import asyncio
 import random
 import aiohttp
 import asyncio
+import os
+from dotenv import load_dotenv
+import logging
 
+logger = logging.getLogger(__name__)
+load_dotenv()
 # returns simple test cases for a problem
 def filter_data(data: dict) -> tuple[list[str], list[str]]:
     input_output = json.loads(data["input_output"])
@@ -58,7 +63,7 @@ async def get_completion(prompt: str, idx: int) -> str:
     print(f"Making request with index: {idx}")
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
-        "Authorization": "Bearer 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",
+        "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
         "Content-Type": "application/json",
     }
     payload = {
