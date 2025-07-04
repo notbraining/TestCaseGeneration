@@ -7,8 +7,6 @@ import requests
 from datasets import Dataset
 import json
 
-from asyncore import loop
-
 
 # returns simple test cases for a problem
 def filter_data(data: dict) -> tuple[list[str], list[str]]:
@@ -129,14 +127,14 @@ if __name__ == "__main__":
     main("test", 10)
 
 
-first loop
-takes in TACO dataset 
-return prompt (your system prompt + problem statement + <input><input>) and target output ex "1"
+# first loop
+# takes in TACO dataset 
+# return prompt (your system prompt + problem statement + <input><input>) and target output ex "1"
 
-second loop takes in what first loops return
-return a list of deepseek's answers and MAKES REQUEST IN APRPAPRRA
-i_f deepseskk's answer does NOT match the output; delete it
+# second loop takes in what first loops return
+# return a list of deepseek's answers and MAKES REQUEST IN APRPAPRRA
+# i_f deepseskk's answer does NOT match the output; delete it
 
-last thoing 
-make the dataset with prompt and completion  
-and write to disk
+# last thoing 
+# make the dataset with prompt and completion  
+# and write to disk
